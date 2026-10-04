@@ -142,6 +142,8 @@ export interface SessionUser {
   email: string | null;
   phone: string | null;
   role: UserRole;
+  /** Home city chosen at registration; null for accounts created before this. */
+  city?: string | null;
 }
 
 /** Returned by register/login: a bearer token plus the account it belongs to. */
@@ -156,6 +158,8 @@ export interface RegisterInput {
   email?: string;
   phone?: string;
   password: string;
+  /** Home city used for location-based discovery (e.g. "Dhubri"). */
+  city?: string;
 }
 
 /** Body for POST /api/auth/login. The identifier is an email or phone number. */
@@ -173,6 +177,8 @@ export interface OwnerProfile {
   businessName: string;
   phone: string | null;
   verified: boolean;
+  /** City where the business operates; null for profiles created before this. */
+  city?: string | null;
 }
 
 /** Body for POST /api/auth/owner/register. */
@@ -192,6 +198,8 @@ export interface OwnerAuthPayload {
 export interface OwnerProfileInput {
   businessName: string;
   businessPhone?: string;
+  /** City where the business operates. */
+  city?: string;
 }
 
 /**

@@ -243,10 +243,6 @@ export default function Dashboard() {
       <View style={styles.topbar}>
         <SearchBar value={query} onChange={setQuery} onSubmit={() => { if (query.trim()) setTab('listings'); }} />
         <View style={styles.topActions}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Toggle sample data" onPress={() => setSampleOn(!sampleOn)} style={[styles.toggle, sampleOn && styles.toggleOn]}>
-            <View style={[styles.toggleDot, sampleOn && styles.toggleDotOn]} />
-            <Text style={[styles.toggleText, sampleOn && { color: '#fff' }]}>Sample data</Text>
-          </Pressable>
           <IconButton glyph="🔔" label="Notifications" badge={placeCounts.PENDING ?? 0} onPress={() => setTab('listings')} />
           <IconButton glyph="✉" label="Messages" badge={overview?.visitRequests.PENDING ?? 0} onPress={() => setTab('bookings')} />
           <View style={styles.account}>

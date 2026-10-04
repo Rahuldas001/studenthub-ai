@@ -11,8 +11,8 @@ platforms through Metro. The single frontend is at
 is retained, but it is a universal app. The separate Vite app has been removed.
 The Express API, PostgreSQL/Prisma setup and shared contracts remain.
 
-Current scope: Welcome → Get Started → registration/login (or Continue as
-guest), Home with search plus budget/sort/gender
+Current scope: Welcome → Get Started → registration/login, Home with search plus
+budget/sort/gender
 filters, demo cards, optional API loading with offline fallback, mock AI and
 cross-platform future-feature notices.
 Student accounts are live: register/login (email or phone + password), bearer
@@ -127,5 +127,6 @@ API base: `http://localhost:4000/api`. Check `GET /health`, `GET /places` and
 `GET /places/:id`. Responses use `{ "success": true, "data": ... }` or
 `{ "success": false, "message": ... }`. Accounts: `POST /api/auth/register`,
 `POST /api/auth/login` (email or phone), `GET /api/auth/me` (bearer token) and
-`POST /api/auth/logout`. Signed-in favorites/reviews/visit requests persist in
-PostgreSQL; guests keep device-local data with no account required.
+`POST /api/auth/logout`. Favorites/reviews/visit requests persist in PostgreSQL
+and require an account; guest exploration has been removed. Location-based
+discovery uses `GET /api/colleges` plus `GET /api/places?latitude=&longitude=&radius=`.

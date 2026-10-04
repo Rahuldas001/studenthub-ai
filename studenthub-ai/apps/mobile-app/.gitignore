@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Release signing key — NEVER commit. This survives `expo prebuild --clean`
+# (which deletes /android) precisely so a rebuild cannot lose the key.
+# Back this folder up: losing it means installed testers can never update.
+/.keystore/

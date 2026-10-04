@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { PlaceSummary } from '@studenthub/types';
 import { Button, Empty, ResultCard, colors, ui } from '../components/ui';
@@ -56,7 +56,7 @@ export function History({ onPlace, onExplore }: { onPlace: (place: PlaceSummary)
 }
 
 export function Profile({ onOpenSaved, onOpenBookings, onOpenHistory }: { onOpenSaved: () => void; onOpenBookings: () => void; onOpenHistory: () => void }) {
-  const { name, saved, visits, session, authBusy, signIn, signUp, signOut } = useStudent();
+  const { name, saved, visits, session, authBusy, signIn, signUp, signOutToWelcome, deleteAccountAndSignOut, campus, location } = useStudent();
   const [message, setMessage] = useState('');
   const [soon, setSoon] = useState<string | null>(null);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -96,7 +96,7 @@ export function Profile({ onOpenSaved, onOpenBookings, onOpenHistory }: { onOpen
         <View style={styles.bigAvatar}><Text style={{ color: '#fff', fontSize: 26, fontWeight: '800' }}>{name ? name[0].toUpperCase() : '☺'}</Text></View>
         <View>
           <Text style={[ui.heading, { color: '#fff' }]}>Hi, {name || 'student'} 👋</Text>
-          <Text style={{ color: '#CFC7F2', fontSize: 12 }}>Guest explorer · Gauhati University</Text>
+          <Text style={{ color: '#CFC7F2', fontSize: 12 }}>Your campus · {location.city}</Text>
         </View>
       </View>
       <View style={styles.statRow}>
@@ -133,9 +133,9 @@ export function Profile({ onOpenSaved, onOpenBookings, onOpenHistory }: { onOpen
       </LinearGradient>
       <View style={ui.panel}>
         <Text style={ui.heading}>Your campus</Text>
-        <Text style={ui.cardTitle}>📍 Gauhati University</Text>
-        <Text style={ui.body}>Guwahati, Assam, India</Text>
-        <Text style={ui.caption}>Our first campus. More colleges and cities are planned.</Text>
+        <Text style={ui.cardTitle}>📍 {campus || location.city}</Text>
+        <Text style={ui.body}>{location.city}, Assam, India</Text>
+        <Text style={ui.caption}>Change your location any time from the location row on Home.</Text>
       </View>
       <View style={ui.panel}>
         {session ? <>
@@ -164,7 +164,29 @@ export function Profile({ onOpenSaved, onOpenBookings, onOpenHistory }: { onOpen
         </>}
       </View>
       {!!message && <Text accessibilityLiveRegion="polite" style={ui.caption}>{message}</Text>}
-      {!!session && <Button title="Log out" secondary onPress={() => { signOut(); setMessage('Signed out. Your local activity stays on this device.'); }} />}
+      {!!session && <Button title="Log out" secondary onPress={() => { signOutToWelcome(); }} />}
+      {!!session && <Button title="Delete account" secondary onPress={() => {
+        if (authBusy) return;
+        Alert.alert(
+          'Delete your account?',
+          'This permanently removes your account, saved places, visit plans, history and reviews from the server and from this device. It cannot be undone.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: () => {
+                setMessage('');
+                deleteAccountAndSignOut()
+                  .then(() => setMessage('Your account and its data have been deleted.'))
+                  .catch((problem: unknown) => {
+                    setMessage(problem instanceof Error ? problem.message : 'Could not delete your account.');
+                  });
+              },
+            },
+          ],
+        );
+      }} />}
       <Text style={[ui.caption, { textAlign: 'center' }]}>StudentHub AI · V1{'\n'}Everything a Student Needs</Text>
     </View>
   </ScrollView>;

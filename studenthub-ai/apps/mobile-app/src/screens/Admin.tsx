@@ -207,7 +207,7 @@ function AdminShell({ title, onBack, children }: { title: string; onBack: () => 
  * than being shown a form that would silently fail with a 403.
  */
 function AdminGate({ onBack }: { onBack: () => void }) {
-  const { authBusy, signIn, session } = useStudent();
+  const { authBusy, signIn, session, signOutToWelcome } = useStudent();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -232,6 +232,7 @@ function AdminGate({ onBack }: { onBack: () => void }) {
           .catch((failure: unknown) => setError(failure instanceof Error ? failure.message : 'Sign-in failed.'));
       }} />
       {!!error && <Text accessibilityRole="alert" style={{ color: errorColor }}>{error}</Text>}
+      {signedIn && <Button title="Sign out and return to Welcome" secondary onPress={signOutToWelcome} />}
       <Text style={ui.caption}>Admins need the API (EXPO_PUBLIC_API_BASE_URL). Dev login: demo.admin@studenthub.local / admin-password-123.</Text>
     </View>
   </AdminShell>;
@@ -240,6 +241,7 @@ function AdminGate({ onBack }: { onBack: () => void }) {
 /** The three admin surfaces: moderation, businesses, geography. */
 function AdminPanel({ onBack }: { onBack: () => void }) {
   const { overview, places, placeCounts, owners, colleges, loading, refresh } = useAdmin();
+  const { signOutToWelcome } = useStudent();
   const [tab, setTab] = useState<'queue' | 'owners' | 'colleges'>('queue');
   const [filter, setFilter] = useState('PENDING');
   const activeFilter = ADMIN_PLACE_FILTERS.find((entry) => entry.id === filter);
@@ -260,6 +262,11 @@ function AdminPanel({ onBack }: { onBack: () => void }) {
       <Chip label={`Businesses (${owners.length})`} selected={tab === 'owners'} onPress={() => setTab('owners')} />
       <Chip label={`Colleges (${colleges.length})`} selected={tab === 'colleges'} onPress={() => setTab('colleges')} />
       <Chip label="Refresh" onPress={refresh} />
+    </View>
+
+    <View style={[ui.between, { gap: 12 }]}>
+      <Text style={[ui.caption, { flexShrink: 1 }]}>Signed in as an admin. Signing out returns you to the welcome screen.</Text>
+      <Button title="Sign out" secondary onPress={signOutToWelcome} />
     </View>
 
     {loading && <Text style={ui.caption}>Loading the console…</Text>}

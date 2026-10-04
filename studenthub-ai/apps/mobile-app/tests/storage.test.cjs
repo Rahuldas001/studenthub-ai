@@ -186,4 +186,18 @@ test('selected campus round-trips and survives restarts', async (t) => {
   assert.equal((await s.loadStoredState()).campus, '');
 });
 
+test('discovery location round-trips and rejects malformed values', async (t) => {
+  const s = setup(t);
+  const location = { city: 'Dhubri', latitude: 26.0207, longitude: 89.9753 };
+  await s.saveStoredState({ ...state(), location });
+  const loaded = await s.restart().loadStoredState();
+  assert.deepEqual(loaded.location, location);
+  // A partial location from a hand-edited file is discarded entirely.
+  fs.writeFileSync(s.file, JSON.stringify({ ...state(), location: { city: 'Dhubri' } }));
+  assert.equal((await s.loadStoredState()).location, undefined);
+  // Coordinates must be finite numbers, not strings.
+  fs.writeFileSync(s.file, JSON.stringify({ ...state(), location: { city: 'Dhubri', latitude: '26.02', longitude: 89.97 } }));
+  assert.equal((await s.loadStoredState()).location, undefined);
+});
+
 

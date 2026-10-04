@@ -1,0 +1,35 @@
+# Dependencies & build output
+node_modules
+**/node_modules
+dist
+**/dist
+build
+.expo
+*.tsbuildinfo
+
+# Generated Prisma client is rebuilt inside the image
+**/src/generated
+
+# Secrets — never bake .env into an image
+.env
+.env.*
+**/.env
+**/.env.*
+
+# VCS, logs, editor noise
+.git
+.gitignore
+.github
+*.log
+logs
+.DS_Store
+.idea
+.vscode
+
+# Not part of the API image
+apps/*/src
+apps/*/tests
+apps/*/assets
+docs
+README.md
+**/*.md

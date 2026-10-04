@@ -24,14 +24,16 @@ const PERKS = [
   { icon: '▲', text: 'Grow faster' },
 ];
 
-export default function OwnerLanding({ onCreate, onSignIn, onBack, onDashboard }: {
+export default function OwnerLanding({ onCreate, onSignIn, onBack, onDashboard, onSignOut }: {
   onCreate: () => void;
   onSignIn: () => void;
   onBack: () => void;
   /** Present at the app root when the session is already an OWNER. */
   onDashboard?: () => void;
+  /** Signing out drops back to the student Welcome screen. */
+  onSignOut?: () => void;
 }) {
-  const { session, signOut } = useStudent();
+  const { session, signOutToWelcome } = useStudent();
   const isOwnerAccount = session?.user.role === 'OWNER';
   return <ScrollView contentContainerStyle={styles.fill}>
     <LinearGradient colors={['#241A5E', '#4C1D95', '#7C3AED']} style={styles.hero}>
@@ -61,7 +63,7 @@ export default function OwnerLanding({ onCreate, onSignIn, onBack, onDashboard }
         {isOwnerAccount
           ? <>
               <Button title="Open owner dashboard" onPress={() => onDashboard?.()} />
-              <Button title="Sign out" secondary onPress={signOut} />
+              <Button title="Sign out" secondary onPress={() => { signOutToWelcome(); onSignOut?.(); }} />
             </>
           : <>
               <Button title="Create Business Profile" onPress={onCreate} />

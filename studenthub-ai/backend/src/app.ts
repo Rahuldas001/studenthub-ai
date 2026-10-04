@@ -67,6 +67,7 @@ export function createApp(): Express {
           'POST /api/admin/colleges',
           'GET /api/places',
           'GET /api/places/:id',
+          'GET /api/colleges',
           'POST /api/reviews',
           'GET /api/favorites',
           'POST /api/favorites',

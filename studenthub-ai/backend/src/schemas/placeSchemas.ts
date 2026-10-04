@@ -25,6 +25,8 @@ export const registerInputSchema = z
       .regex(/^[+\d][\d\s-]*$/, 'Enter a valid phone number')
       .optional(),
     password: z.string().min(8).max(200),
+    /** Home city for location-based discovery (optional at the API level). */
+    city: z.string().trim().min(2).max(80).optional(),
   })
   .refine((value) => Boolean(value.email || value.phone), {
     message: 'Provide an email address or a phone number',
@@ -34,6 +36,19 @@ export const registerInputSchema = z
 export const loginInputSchema = z.object({
   identifier: z.string().trim().min(3).max(200),
   password: z.string().min(1).max(200),
+});
+
+/**
+ * Body for DELETE /api/auth/account.
+ *
+ * The confirmation phrase is deliberate: account removal is irreversible and
+ * this endpoint is called from a tappable UI, so a stray request body should
+ * never be able to wipe an account.
+ */
+export const deleteAccountInputSchema = z.object({
+  confirm: z.string().refine((value) => value === 'DELETE', {
+    message: 'Type DELETE to confirm account deletion.',
+  }),
 });
 
 /** Shared enum mirrors of the Prisma enums (kept in sync manually in V1). */
@@ -135,6 +150,7 @@ export const ownerRegisterInputSchema = registerInputSchema.extend({
 export const ownerProfileInputSchema = z.object({
   businessName: z.string().trim().min(2).max(120),
   businessPhone: businessPhoneSchema.optional(),
+  city: z.string().trim().min(2).max(80).optional(),
 });
 
 /**

@@ -54,6 +54,7 @@ export function toSessionUser(user: {
   email: string | null;
   phone: string | null;
   role: UserRole;
+  city?: string | null;
 }): SessionUser {
   return {
     id: user.id,
@@ -61,6 +62,7 @@ export function toSessionUser(user: {
     email: user.email,
     phone: user.phone,
     role: user.role,
+    city: user.city ?? null,
   };
 }
 
@@ -138,6 +140,7 @@ export async function register(input: RegisterInput): Promise<{ token: string; u
         phone,
         passwordHash,
         role: 'STUDENT',
+        city: input.city ? sanitizeText(input.city, 80) : null,
       },
     });
 

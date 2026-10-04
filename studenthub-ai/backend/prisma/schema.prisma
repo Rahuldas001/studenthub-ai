@@ -77,6 +77,8 @@ model User {
   role         UserRole @default(STUDENT)
   isGuest      Boolean  @default(false)
   avatarUrl    String?
+  /// Home city chosen during registration; drives location-based discovery.
+  city         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -109,6 +111,8 @@ model Owner {
   userId       String   @unique
   businessName String
   phone        String?
+  /// City where the business operates; anchors it to the launch geography.
+  city         String?
   verified     Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

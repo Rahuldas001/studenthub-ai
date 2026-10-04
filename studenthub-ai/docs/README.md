@@ -3,8 +3,9 @@
 Expo is the single frontend for Android, iOS and web. Vite is removed. The API,
 Prisma schema and shared types remain unchanged in structure.
 
-Implemented: guest Home, search/category filtering, demo cards, optional API
-loading, offline fallback and cross-platform AI/feature notices.
+Implemented: Home with search/category filtering, demo cards, optional API
+loading, offline fallback and cross-platform AI/feature notices. Accounts are
+required — guest exploration has been removed.
 
 Home includes an interactive Leaflet/OpenStreetMap map in web iframe/native WebView, with category-filtered markers. Network access is required for map assets and tiles; device geolocation is not yet implemented.
 

@@ -1,0 +1,24 @@
+StudentHub AI helps you find the places that actually matter when you move to a new campus — where to stay, where to eat, where to study, and what's within walking distance.
+
+REAL PLACES, NOT A CATALOGUE
+Every listing comes from OpenStreetMap, so you see the hostel, canteen, pharmacy or ATM that is really there — with its actual address, map position, opening hours and phone number where available.
+
+FIND WHAT'S NEAR YOU
+Allow location once and the app centres on the campus nearest you, then sorts everything by distance. Browse by category: Hostels, PGs, Restaurants, Cafes, Mess & tiffin, Libraries, Pharmacies, Gyms, ATMs, Groceries and Bus stops.
+
+SEE IT ON A MAP
+A built-in campus map shows every result and your position, so you can judge a walk before you make it.
+
+SAVE AND PLAN
+Save the places you like, keep a list of places you want to visit, and revisit what you looked at recently. Everything you save stays on your phone.
+
+FOR OWNERS
+Run a PG, hostel or restaurant? Claim your listing, add photos, offers and opening hours, and let students find you.
+
+LOCATIONS
+Guwahati, Dibrugarh and Dhubri — more cities as coverage grows.
+
+Notes:
+- Location is optional. The app works fully if you deny it; you can pick a city instead.
+- Your precise coordinates are used for nearby search only and are never stored on our servers.
+- Listings are community-sourced from OpenStreetMap (© OpenStreetMap contributors, ODbL). Always confirm timings and prices with the owner.

@@ -1,0 +1,7 @@
+First public release.
+
+- Real listings imported from OpenStreetMap for Guwahati, Dibrugarh and Dhubri
+- Distance-sorted nearby search centred on your campus
+- Campus map with your position
+- Save places and keep a visit plan
+- Optional, one-shot location permission — the app works without it

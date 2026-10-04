@@ -57,9 +57,22 @@ function StudentApp() {
     }
   }, [hydrated, hasLaunched, gated]);
   /**
+   * Signing out returns to Welcome.
+   *
+   * `signOutToWelcome` clears the launched flag; this drops the app back to its
+   * first stage with an empty page stack. Guarded on the current stage so the
+   * Welcome → Auth and business-welcome flows are never interrupted.
+   */
+  useEffect(() => {
+    if (!hydrated || hasLaunched || stage !== 'app') return;
+    setTab('discover');
+    setPages([]);
+    setStage('welcome');
+  }, [hydrated, hasLaunched, stage]);
+  /**
    * Role-driven landing: an OWNER session opens the owner dashboard — after any
    * sign-in path (Get Started, List your business, Profile) and on relaunch
-   * with a stored session. Student and guest sessions stay on the home tabs,
+   * with a stored session. Student sessions stay on the home tabs,
    * and never sit on the owner screen (sign-out from it falls back to Home).
    */
   const sessionRole = session?.user.role ?? null;
@@ -100,14 +113,15 @@ function StudentApp() {
   const showBusinessWelcome = stage === 'owner';
   return <SafeAreaView style={[styles.safeArea, (showWelcome || showBusinessWelcome) && { backgroundColor: '#150F33' }]}>
     <StatusBar style={showWelcome || showBusinessWelcome ? 'light' : 'dark'} />
-    {showWelcome ? <Welcome onGetStarted={() => { setAuthIntent('student'); setAuthMode('signup'); setStage('auth'); }} onExploreAsGuest={() => enterApp()} onOwner={() => { setAuthIntent('owner'); setStage('owner'); }} />
+    {showWelcome ? <Welcome onGetStarted={() => { setAuthIntent('student'); setAuthMode('signup'); setStage('auth'); }} onExploreAsGuest={() => { completeWelcome(); setStage('app'); }} onOwner={() => { setAuthIntent('owner'); setStage('owner'); }} />
       : showBusinessWelcome ? <OwnerLanding
           onBack={() => setStage('welcome')}
           onCreate={() => { setAuthIntent('owner'); setAuthMode('signup'); setStage('auth'); }}
           onSignIn={() => { setAuthIntent('owner'); setAuthMode('login'); setStage('auth'); }}
           onDashboard={() => enterApp()}
+          onSignOut={() => setStage('welcome')}
         />
-      : showAuth ? <Auth intent={authIntent} initialMode={authMode} onAuthenticated={() => enterApp()} onGuest={() => enterApp()} onBack={() => setStage(authIntent === 'owner' ? 'owner' : 'welcome')} />
+      : showAuth ? <Auth intent={authIntent} initialMode={authMode} onAuthenticated={() => enterApp()} onBack={() => setStage(authIntent === 'owner' ? 'owner' : 'welcome')} />
       : !hydrated ? <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <ActivityIndicator color={colors.purple} />
       <Text accessibilityLiveRegion="polite">Loading your saved activity…</Text>

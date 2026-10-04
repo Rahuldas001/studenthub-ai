@@ -20,11 +20,12 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
-    "test": "DATABASE_URL= tsx --test tests/auth.test.mts tests/auth-routes.test.mts tests/owner.test.mts tests/owner-routes.test.mts tests/admin.test.mts tests/admin-routes.test.mts",
+    "test": "DATABASE_URL= tsx --test tests/auth.test.mts tests/auth-routes.test.mts tests/account.test.mts tests/owner.test.mts tests/owner-routes.test.mts tests/admin.test.mts tests/admin-routes.test.mts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:import": "tsx prisma/import-osm.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

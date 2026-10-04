@@ -43,7 +43,7 @@ function OwnerTools({ onBack }: { onBack: () => void }) {
     form: (placeId) => { setFormOpen(true); setFormPlaceId(placeId ?? null); },
   };
 
-  // Screen 1: guests and students get the gate, never the dashboard.
+  // Screen 1: signed-out visitors and students get the gate, never the dashboard.
   if (!isOwner) {
     return <View style={kit.screen}>
       {gate === 'auth'

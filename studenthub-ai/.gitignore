@@ -13,6 +13,10 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.production.*
+# …but the documented example stays committable.
+!.env.production.example
 
 # Logs
 logs/

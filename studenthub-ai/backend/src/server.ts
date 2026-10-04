@@ -11,7 +11,7 @@ const server = app.listen(env.port, () => {
   console.log(
     isDatabaseConfigured()
       ? '[studenthub] DATABASE_URL detected — PostgreSQL will be used when reachable.'
-      : '[studenthub] No DATABASE_URL — serving the bundled demo dataset.',
+      : '[studenthub] No DATABASE_URL — data endpoints will answer 503 until PostgreSQL is configured.',
   );
   console.log(`[studenthub] Health check: http://localhost:${env.port}/api/health`);
 });

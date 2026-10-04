@@ -16,7 +16,7 @@ import { Notice, OwnerTopBar, kit, type OwnerNav } from './OwnerKit';
 export default function OwnerAccount({ onBack, onExit }: { onBack: () => void; onExit: () => void }) {
   const { profile, places, requestCounts } = useOwner();
   const { offers, reviews, refreshOffers, refreshReviews } = useOwnerExtras();
-  const { session, signOut } = useStudent();
+  const { session, signOutToWelcome } = useStudent();
 
   const user = session?.user;
   const liveOffers = offers.filter((offer) => offer.active).length;
@@ -27,7 +27,7 @@ export default function OwnerAccount({ onBack, onExit }: { onBack: () => void; o
     [{ text: 'Stay signed in', style: 'cancel' }, {
       text: 'Sign out',
       style: 'destructive',
-      onPress: () => { signOut(); onExit(); },
+      onPress: () => { signOutToWelcome(); onExit(); },
     }],
   );
 

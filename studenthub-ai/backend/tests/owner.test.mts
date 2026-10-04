@@ -5,7 +5,14 @@ import { getOwnerProfile, registerOwner, toOwnerProfile, upsertOwnerProfile } fr
 test('owner profiles map to the public shape without internals', () => {
   assert.deepEqual(
     toOwnerProfile({ id: 'owner-1', businessName: ' Test PG ', phone: '+919999999999', verified: true }),
-    { id: 'owner-1', businessName: ' Test PG ', phone: '+919999999999', verified: true },
+    { id: 'owner-1', businessName: ' Test PG ', phone: '+919999999999', verified: true, city: null },
+  );
+});
+
+test('owner profiles carry the city the business operates in', () => {
+  assert.deepEqual(
+    toOwnerProfile({ id: 'owner-2', businessName: 'Dhubri Cafe', phone: null, verified: false, city: 'Dhubri' }),
+    { id: 'owner-2', businessName: 'Dhubri Cafe', phone: null, verified: false, city: 'Dhubri' },
   );
 });
 

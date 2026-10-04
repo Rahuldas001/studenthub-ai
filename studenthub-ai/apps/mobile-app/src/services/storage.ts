@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import type { PlaceSummary } from '@studenthub/types';
+import type { StudentLocation } from './places';
 
 /** Visit plan shape persisted on the device (mirrors context Visit). */
 export interface StoredVisit {
@@ -17,7 +18,7 @@ export interface StoredHistoryEntry {
   viewedAt: string;
 }
 /** Everything the app keeps between launches. */
-export interface StoredState { saved: PlaceSummary[]; visits: StoredVisit[]; name: string; hasLaunched: boolean; history?: StoredHistoryEntry[]; /** Selected college name from the campus picker. */ campus?: string; }
+export interface StoredState { saved: PlaceSummary[]; visits: StoredVisit[]; name: string; hasLaunched: boolean; history?: StoredHistoryEntry[]; /** Selected college name from the campus picker. */ campus?: string; /** City + coordinates discovery is centred on. */ location?: StudentLocation; }
 
 const STATE_FILE = FileSystem.documentDirectory ? `${FileSystem.documentDirectory}studenthub-state.json` : null;
 let pending: Promise<void> = Promise.resolve();
@@ -50,6 +51,13 @@ function isVisit(value: unknown): value is StoredVisit {
     && typeof value.date === 'string' && typeof value.note === 'string' && isPlace(value.place);
 }
 
+/** Guards the persisted location so a hand-edited file cannot break discovery. */
+function isLocation(value: unknown): value is StudentLocation {
+  return isRecord(value) && typeof value.city === 'string'
+    && typeof value.latitude === 'number' && typeof value.longitude === 'number'
+    && Number.isFinite(value.latitude) && Number.isFinite(value.longitude);
+}
+
 /** Returns the stored student state, or null when missing/corrupt. Never throws. */
 export async function loadStoredState(): Promise<StoredState | null> {
   try {
@@ -70,8 +78,11 @@ export async function loadStoredState(): Promise<StoredState | null> {
     const name = typeof parsed.name === 'string' ? parsed.name.slice(0, 50) : '';
     const hasLaunched = parsed.hasLaunched === true;
     const campus = typeof parsed.campus === 'string' ? parsed.campus.slice(0, 80) : '';
-    if (saved.length === 0 && visits.length === 0 && history.length === 0 && name === '' && !hasLaunched && !campus) return null;
-    return { saved, visits, name, hasLaunched, history, campus };
+    const location = isLocation(parsed.location) ? parsed.location : undefined;
+    if (saved.length === 0 && visits.length === 0 && history.length === 0 && name === '' && !hasLaunched && !campus && !location) return null;
+    // `location` is spread in only when stored, so states without one keep their
+    // previous shape instead of gaining an `undefined` key.
+    return { saved, visits, name, hasLaunched, history, campus, ...(location ? { location } : {}) };
   } catch {
     return null;
   }

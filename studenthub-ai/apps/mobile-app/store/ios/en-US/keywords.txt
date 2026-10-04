@@ -1,0 +1,1 @@
+hostel,pg,paying guest,room rental,student,university,college,canteen,restaurant,library,cafe,pharmacy,gym,study

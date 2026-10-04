@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { healthRouter } from './healthRoutes.js';
 import { placeRoutes } from './placeRoutes.js';
+import { collegeRoutes } from './collegeRoutes.js';
 import { reviewRoutes } from './reviewRoutes.js';
 import { favoriteRoutes } from './favoriteRoutes.js';
 import { visitRequestRoutes } from './visitRequestRoutes.js';
@@ -18,6 +19,7 @@ apiRouter.use('/auth', ownerAuthRoutes);
 apiRouter.use('/owner', ownerRoutes);
 apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/places', placeRoutes);
+apiRouter.use('/colleges', collegeRoutes);
 apiRouter.use('/reviews', reviewRoutes);
 apiRouter.use('/favorites', favoriteRoutes);
 apiRouter.use('/visit-requests', visitRequestRoutes);

@@ -66,7 +66,7 @@ export async function clearSession(): Promise<void> {
   }
 }
 
-/** Accounts require the API; offline demo mode stays guest-only. */
+/** Accounts require the API; without it registration is unavailable. */
 function requireApi(): void {
   if (!apiConfigured()) {
     throw new Error('Accounts need the API. Set EXPO_PUBLIC_API_BASE_URL in apps/mobile-app/.env.');
@@ -92,4 +92,29 @@ export async function loginAccount(input: LoginInput): Promise<StoredSession> {
   requireApi();
   const payload = await apiRequest<AuthPayload>('/auth/login', { method: 'POST', body: input });
   return { token: payload.token, user: payload.user };
+}
+
+/** What the server removed, echoed back for the confirmation message. */
+export interface DeletedAccountSummary {
+  deleted: true;
+  email: string | null;
+  reviewsRemoved: number;
+  visitRequestsRemoved: number;
+  favoritesRemoved: number;
+  listingsReleased: number;
+}
+
+/**
+ * Permanently deletes the signed-in account on the server.
+ *
+ * Irreversible — callers must confirm with the user first. The `DELETE` phrase
+ * is the confirmation the API demands, so it cannot be triggered by a stray
+ * request body.
+ */
+export async function deleteAccount(token: string): Promise<DeletedAccountSummary> {
+  return apiRequest<DeletedAccountSummary>('/auth/account', {
+    method: 'DELETE',
+    body: { confirm: 'DELETE' },
+    token,
+  });
 }

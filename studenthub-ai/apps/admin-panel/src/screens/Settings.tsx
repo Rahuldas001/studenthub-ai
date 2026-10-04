@@ -40,13 +40,10 @@ export default function Settings() {
     </Card>
 
     <Card>
-      <CardHeader title="Sample data" right={<SoftBadge label={sampleOn ? 'On' : 'Off'} tone={sampleOn ? 'amber' : 'slate'} />} />
+      <CardHeader title="Sample data" right={<SoftBadge label="Removed" tone="green" />} />
       <Text style={ui.body}>
-        Fills the dashboard widgets the API cannot feed — the month-over-month growth line, the per-cent deltas, the named booking rows and the notification stream — with clearly-badged sample values. Turn it off for a strictly real-data view.
+        The console now shows real figures only. The sample-data toggle used to fill the month-over-month growth line, per-cent deltas and named booking rows; those widgets fall back to live API aggregates instead.
       </Text>
-      <Pressable accessibilityRole="switch" accessibilityLabel="Toggle sample data" accessibilityState={{ checked: sampleOn }} onPress={() => setSampleOn(!sampleOn)} style={[styles.toggle, sampleOn && styles.toggleOn]}>
-        <View style={[styles.thumb, { alignSelf: sampleOn ? 'flex-end' : 'flex-start' }]} />
-      </Pressable>
     </Card>
   </View>;
 }

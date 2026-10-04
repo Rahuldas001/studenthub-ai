@@ -9,6 +9,7 @@
     "expo-file-system": "~57.0.7",
     "expo-linear-gradient": "^57.0.2",
     "expo-location": "~57.0.19",
+    "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eas-cli": "^24.10.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -29,8 +31,16 @@
     "test:owner": "node --test tests/owner.test.cjs",
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform all --output-dir dist/all",
-    "android": "expo start --android",
-    "ios": "expo start --ios"
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "config:check": "expo config --type public",
+    "eas:whoami": "eas whoami",
+    "build:android": "eas build --platform android --profile production",
+    "build:ios": "eas build --platform ios --profile production",
+    "build:preview": "eas build --platform all --profile preview",
+    "build:apk": "eas build --platform android --profile preview",
+    "submit:ios": "eas submit --platform ios --profile production",
+    "submit:android": "eas submit --platform android --profile production"
   },
   "private": true
 }

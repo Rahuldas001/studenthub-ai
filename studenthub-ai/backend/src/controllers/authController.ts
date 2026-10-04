@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type { LoginInput, RegisterInput } from '@studenthub/types';
 import { getAccount, login, register } from '../services/authService.js';
+import { deleteAccount } from '../services/accountService.js';
 import { ok } from '../utils/response.js';
 
 /** POST /api/auth/register */
@@ -33,4 +34,16 @@ export async function getMe(req: Request, res: Response): Promise<void> {
  */
 export async function postLogout(_req: Request, res: Response): Promise<void> {
   res.json(ok({ signedOut: true }));
+}
+
+/**
+ * DELETE /api/auth/account
+ *
+ * Account deletion, required by Google Play before production approval: the
+ * user must be able to remove their account and its data from inside the app.
+ * The session token proves who is asking; the `confirm` phrase guards the body.
+ */
+export async function deleteAccountHandler(req: Request, res: Response): Promise<void> {
+  const summary = await deleteAccount(req.user!.id);
+  res.json(ok(summary));
 }

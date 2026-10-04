@@ -95,6 +95,28 @@ test('logout acknowledges the client-side sign-out', async () => {
   assert.deepEqual(expectSuccess<{ signedOut: boolean }>(payload), { signedOut: true });
 });
 
+test('delete account refuses anonymous callers', async () => {
+  const { status, payload } = await api('DELETE', '/auth/account', { confirm: 'DELETE' });
+  assert.equal(status, 401);
+  assert.match(expectFailure(payload), /sign in/i);
+});
+
+test('delete account rejects a body without the DELETE confirmation', async () => {
+  const token = signSessionToken('route-test-user', 'STUDENT');
+  const { status, payload } = await api('DELETE', '/auth/account', { confirm: 'yes' }, token);
+  assert.equal(status, 400);
+  assert.match(expectFailure(payload), /validation failed/i);
+});
+
+test('delete account passes auth and validation, then needs the database', async () => {
+  const token = signSessionToken('route-test-user', 'STUDENT');
+  const { status, payload } = await api('DELETE', '/auth/account', { confirm: 'DELETE' }, token);
+  // Auth and the confirmation phrase both cleared; only the missing database
+  // stops the deletion, which proves the whole chain is wired.
+  assert.equal(status, 503);
+  assert.match(expectFailure(payload), /database/i);
+});
+
 test('guest favorites still resolve to the empty demo fallback', async () => {
   const { status, payload } = await api('GET', '/favorites');
   assert.equal(status, 200);

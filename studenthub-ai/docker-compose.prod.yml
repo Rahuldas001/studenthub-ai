@@ -1,0 +1,80 @@
+# Production stack for the StudentHub AI API + PostgreSQL.
+#
+# Differences from the dev docker-compose.yml:
+#   * PostgreSQL is NOT published on the host — only the API reaches it on the
+#     internal network.
+#   * Credentials and secrets come from .env.production (never committed).
+#   * The API runs as a non-root user with a health check and graceful restart.
+#
+# Usage:
+#   cp .env.production.example .env.production   # then edit every value
+#   docker compose -f docker-compose.prod.yml run --rm migrate   # schema + seed
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Validate the image build first (it has not been run in this dev environment):
+#   docker build -f backend/Dockerfile -t studenthub-api .
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: studenthub-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-studenthub_ai}
+    # No `ports:` on purpose — nothing outside this network may reach the DB.
+    volumes:
+      - studenthub_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: studenthub-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env.production}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env.production}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # One-shot: prisma db push + seed. The runtime image deliberately omits the
+  # Prisma CLI (a devDependency), so this reuses the build stage, which has it.
+  #   docker compose -f docker-compose.prod.yml run --rm migrate
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: build
+    profiles: ["init"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env.production}
+    command: >
+      sh -c "npm run db:push --workspace @studenthub/backend
+             && npm run db:seed --workspace @studenthub/backend"
+    restart: "no"
+
+volumes:
+  studenthub_pgdata_prod:

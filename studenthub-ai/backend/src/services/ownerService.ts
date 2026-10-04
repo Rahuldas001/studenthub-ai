@@ -31,12 +31,14 @@ export function toOwnerProfile(owner: {
   businessName: string;
   phone: string | null;
   verified: boolean;
+  city?: string | null;
 }): OwnerProfile {
   return {
     id: owner.id,
     businessName: owner.businessName,
     phone: owner.phone,
     verified: owner.verified,
+    city: owner.city ?? null,
   };
 }
 
@@ -69,6 +71,7 @@ export async function registerOwner(input: OwnerRegisterInput): Promise<OwnerAut
           create: {
             businessName: sanitizeText(input.businessName, 120),
             phone: input.businessPhone ? sanitizePhone(input.businessPhone) : null,
+            city: input.city ? sanitizeText(input.city, 80) : null,
           },
         },
       },
@@ -144,6 +147,7 @@ export async function upsertOwnerProfile(userId: string, input: OwnerProfileInpu
         userId,
         businessName: sanitizeText(input.businessName, 120),
         phone: input.businessPhone ? sanitizePhone(input.businessPhone) : null,
+        city: input.city ? sanitizeText(input.city, 80) : null,
       },
     });
 

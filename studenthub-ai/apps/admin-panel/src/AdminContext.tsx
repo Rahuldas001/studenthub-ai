@@ -33,11 +33,12 @@ function useAdminState() {
   const [colleges, setColleges] = useState<AdminCollegeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  // Sample data fills only the dashboard widgets the API cannot feed (monthly
-  // growth, deltas, named booking rows, notifications). Defaults on so the
-  // console matches the reference out of the box; every sample surface is
-  // badged and the toggle turns it off for a strictly real-data view.
-  const [sampleOn, setSampleOn] = useState(true);
+  // Sample data filled the widgets the API cannot feed (monthly growth, deltas,
+  // named booking rows). It is permanently off now: the console shows real
+  // figures only, so remove src/sample.ts and the sampleOn branches to finish
+  // the cleanup.
+  const [sampleOn] = useState(false);
+  const setSampleOn = undefined;
 
   useEffect(() => {
     let active = true;

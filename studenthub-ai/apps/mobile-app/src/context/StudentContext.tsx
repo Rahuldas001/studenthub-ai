@@ -1,11 +1,19 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
+  College,
   LoginInput,
   OwnerRegisterInput,
   PlaceSummary,
   RegisterInput,
 } from '@studenthub/types';
-import { DEMO_PLACES, loadPlaces } from '../services/places';
+import {
+  DEFAULT_LOCATION,
+  fetchColleges,
+  loadPlaces,
+  nearestCollege,
+  type StudentLocation,
+} from '../services/places';
+import { useDeviceLocation } from '../services/location';
 import { apiConfigured, apiRequest } from '../services/api';
 import {
   clearSession,
@@ -14,6 +22,7 @@ import {
   registerAccount,
   registerOwnerAccount,
   saveSession,
+  deleteAccount,
   type StoredSession,
 } from '../services/auth';
 import { clearStoredState, loadStoredState, saveStoredState, type StoredHistoryEntry, type StoredVisit } from '../services/storage';
@@ -21,7 +30,7 @@ import { clearStoredState, loadStoredState, saveStoredState, type StoredHistoryE
 /** A personal visit plan; also sent to the API when signed in. */
 export type Visit = StoredVisit;
 function useStudentState() {
-  const [places, setPlaces] = useState<PlaceSummary[]>(DEMO_PLACES);
+  const [places, setPlaces] = useState<PlaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState('Loading places…');
   const [retry, setRetry] = useState(0);
@@ -30,6 +39,12 @@ function useStudentState() {
   const [history, setHistory] = useState<StoredHistoryEntry[]>([]);
   const [name, setName] = useState('');
   const [campus, setCampus] = useState('');
+  /** City + coordinates discovery is centred on (detected on launch, or picked). */
+  const [location, setLocation] = useState<StudentLocation>(DEFAULT_LOCATION);
+  const [colleges, setColleges] = useState<College[]>([]);
+  /** True once a previously saved location was restored; blocks auto-detection. */
+  const [restoredLocation, setRestoredLocation] = useState(false);
+  const deviceLocation = useDeviceLocation();
   const [hasLaunched, setHasLaunched] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [session, setSession] = useState<StoredSession | null>(null);
@@ -38,28 +53,52 @@ function useStudentState() {
     let active = true;
     Promise.all([loadStoredState(), loadSession()]).then(([state, auth]) => {
       if (!active) return;
-      if (state) { setSaved(state.saved); setVisits(state.visits); setName(state.name); setHasLaunched(state.hasLaunched); setHistory(state.history ?? []); setCampus(state.campus ?? ''); }
+      if (state) { setSaved(state.saved); setVisits(state.visits); setName(state.name); setHasLaunched(state.hasLaunched); setHistory(state.history ?? []); setCampus(state.campus ?? ''); if (state.location) { setLocation(state.location); setRestoredLocation(true); } }
       setSession(auth);
     }).finally(() => { if (active) setHydrated(true); });
     return () => { active = false; };
   }, []);
+  /** Launch cities for the location picker; falls back to the bundled list. */
+  useEffect(() => {
+    let active = true;
+    fetchColleges()
+      .then((rows) => { if (active && rows.length) setColleges(rows); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  /**
+   * On launch, turn a device fix into the nearest launch city so a student in
+   * Dhubri lands on Dhubri. Skipped when a location was already saved or when
+   * the student denies location access; discovery then falls back to Guwahati.
+   */
+  useEffect(() => {
+    if (!hydrated || restoredLocation) return;
+    if (!deviceLocation?.granted || colleges.length === 0) return;
+    const nearest = nearestCollege(colleges, deviceLocation.latitude, deviceLocation.longitude);
+    if (nearest) setLocation({ city: nearest.city, latitude: nearest.latitude, longitude: nearest.longitude });
+  }, [hydrated, restoredLocation, deviceLocation, colleges]);
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
     setLoading(true);
-    loadPlaces(controller.signal).then((result) => {
+    // Discovery is centred on the chosen location, so launching in Dhubri
+    // requests listings near Dhubri rather than the Guwahati default.
+    loadPlaces(controller.signal, location).then((result) => {
       if (active) { setPlaces(result.places); setSource(result.source); }
-    }).catch(() => {
-      if (active) { setPlaces(DEMO_PLACES); setSource('API unavailable · fictional offline listings'); }
+    }).catch((problem: unknown) => {
+      if (!active) return;
+      setPlaces([]);
+      setSource(problem instanceof Error ? problem.message : 'Could not load places.');
     }).finally(() => { clearTimeout(timer); if (active) setLoading(false); });
     return () => { active = false; controller.abort(); clearTimeout(timer); };
-  }, [retry]);
+  }, [retry, location]);
   useEffect(() => {
     if (!hydrated) return;
-    if (!saved.length && !visits.length && !history.length && !name && !hasLaunched && !campus) { void clearStoredState(); return; }
-    void saveStoredState({ saved, visits, name, hasLaunched, history, campus });
-  }, [hydrated, saved, visits, name, hasLaunched, campus]);
+    if (!saved.length && !visits.length && !history.length && !name && !hasLaunched && !campus && !restoredLocation && location.city === DEFAULT_LOCATION.city) { void clearStoredState(); return; }
+    void saveStoredState({ saved, visits, name, hasLaunched, history, campus, location });
+  }, [hydrated, saved, visits, name, hasLaunched, campus, history, restoredLocation, location]);
   const savedIds = useMemo(() => new Set(saved.map((place) => place.id)), [saved]);
   /** Records a place view for Recently Viewed: newest first, deduped, capped at 20. */
   const trackRecent = (place: PlaceSummary) => {
@@ -116,7 +155,7 @@ function useStudentState() {
   const signUp = async (input: RegisterInput) => {
     setAuthBusy(true);
     try {
-      applySession(await registerAccount(input));
+      applySession(await registerAccount({ ...input, city: input.city ?? location.city }));
     } finally {
       setAuthBusy(false);
     }
@@ -124,7 +163,7 @@ function useStudentState() {
   const signUpOwner = async (input: OwnerRegisterInput) => {
     setAuthBusy(true);
     try {
-      applySession(await registerOwnerAccount(input));
+      applySession(await registerOwnerAccount({ ...input, city: input.city ?? location.city }));
     } finally {
       setAuthBusy(false);
     }
@@ -142,6 +181,49 @@ function useStudentState() {
     setSession(null);
     void clearSession();
   };
+  /**
+   * Signs out and replays Welcome.
+   *
+   * Clearing the "launched" flag makes `App` fall back to its welcome stage, so
+   * logging out lands on the first screen again (and on the next launch too)
+   * without clearing the device's saved places.
+   */
+  const signOutToWelcome = () => {
+    signOut();
+    setHasLaunched(false);
+  };
+  /**
+   * Permanently deletes the signed-in account, on the server and on this device.
+   *
+   * Google Play requires users to be able to remove their account from inside
+   * the app, so this does the whole job: the API call first (it needs a live
+   * session token), then the local file is wiped and every piece of state that
+   * belonged to the account — saved places, visit plans, history, name, campus
+   * and chosen location — is reset. The app returns to the Welcome screen and
+   * next launch starts clean.
+   *
+   * Throws on failure so the screen can show the reason; nothing local is
+   * cleared unless the server confirmed the deletion.
+   */
+  const deleteAccountAndSignOut = async () => {
+    if (!session) throw new Error('Sign in to delete your account.');
+    setAuthBusy(true);
+    try {
+      await deleteAccount(session.token);
+      await clearStoredState();
+      setSession(null);
+      void clearSession();
+      setSaved([]);
+      setVisits([]);
+      setHistory([]);
+      setName('');
+      setCampus('');
+      setLocation(DEFAULT_LOCATION);
+      setHasLaunched(false);
+    } finally {
+      setAuthBusy(false);
+    }
+  };
   return {
     hydrated, places, loading, source, refresh: () => setRetry((value) => value + 1),
     saved, savedIds, toggleSaved,
@@ -149,8 +231,12 @@ function useStudentState() {
     cancelVisit: (id: string) => setVisits((current) => current.filter((visit) => visit.id !== id)),
     name, setName, clearActivity: () => { setSaved([]); setVisits([]); setName(''); setHistory([]); },
     campus, setCampus,
+    location, colleges,
+    /** Sets the discovery location from the campus picker (persisted on device). */
+    chooseLocation: (next: StudentLocation) => setLocation(next),
     history, trackRecent, clearHistory: () => setHistory([]),
-    session, authBusy, signIn, signUp, signUpOwner, setSessionOwner, signOut,
+    session, authBusy, signIn, signUp, signUpOwner, setSessionOwner, signOut, signOutToWelcome,
+    deleteAccountAndSignOut,
     hasLaunched,
     /** Persist that Welcome was completed so it shows once per device. */
     completeWelcome: () => setHasLaunched(true),

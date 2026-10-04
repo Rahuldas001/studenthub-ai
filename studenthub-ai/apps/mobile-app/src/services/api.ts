@@ -22,14 +22,20 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
-/** Backend failures carry the HTTP status so screens can branch on it. */
+/**
+ * Backend failures carry the HTTP status so screens can branch on it, plus the
+ * optional field-level validation details (`errors`) so forms can show which
+ * input was rejected instead of a bare "Validation failed".
+ */
 export class ApiRequestError extends Error {
   readonly status: number;
+  readonly errors?: Record<string, string[]>;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, errors?: Record<string, string[]>) {
     super(message);
     this.name = 'ApiRequestError';
     this.status = status;
+    this.errors = errors;
   }
 }
 
@@ -46,6 +52,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   });
 
   const result = await response.json() as ApiResponse<T>;
-  if (!result.success) throw new ApiRequestError(response.status, result.message);
+  if (!result.success) throw new ApiRequestError(response.status, result.message, result.errors);
   return result.data;
 }

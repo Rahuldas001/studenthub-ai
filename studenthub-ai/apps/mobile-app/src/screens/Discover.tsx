@@ -19,7 +19,7 @@ const tileColors: Record<string, { bg: string; fg: string }> = {
 const TILES: Category[] = ['HOSTEL', 'PG', 'RESTAURANT', 'CAFE'];
 
 export default function Discover({ onPlace, onAssistant, onCampus }: { onPlace: (place: PlaceSummary) => void; onAssistant: () => void; onCampus: () => void }) {
-  const { places, loading, source, refresh, name } = useStudent();
+  const { places, loading, source, refresh, name, location } = useStudent();
   const deviceLocation = useDeviceLocation();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Category>('ALL');
@@ -51,7 +51,7 @@ export default function Discover({ onPlace, onAssistant, onCampus }: { onPlace: 
 
     <Pressable accessibilityRole="button" onPress={onCampus} style={[ui.row, { alignSelf: 'flex-start' }]}>
       <Text style={{ color: colors.purple, fontSize: 16 }}>⌖</Text>
-      <Text style={styles.location}>Guwahati, Assam</Text>
+      <Text style={styles.location}>{location.city}, Assam</Text>
       <Text style={{ color: colors.muted, fontSize: 13 }}>⌄</Text>
     </Pressable>
 
@@ -108,7 +108,7 @@ export default function Discover({ onPlace, onAssistant, onCampus }: { onPlace: 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 4 }}>{popular.map((place) => <PlaceCard key={place.id} place={place} compact onPress={() => onPlace(place)} />)}</ScrollView>
     </>}
 
-    <Text style={[ui.caption, { textAlign: 'center' }]}>Made for student life. Built around you.{'\n'}Guwahati, Assam ♡</Text>
+    <Text style={[ui.caption, { textAlign: 'center' }]}>Made for student life. Built around you.{'\n'}{location.city}, Assam ♡</Text>
   </ScrollView>;
 }
 

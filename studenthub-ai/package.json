@@ -28,6 +28,12 @@
     "test:admin-panel": "npm run test --workspace @studenthub/admin-panel",
     "dev:backend": "npm run dev --workspace @studenthub/backend",
     "build": "npm run build --workspace @studenthub/backend && npm run build:web",
+  "build:api": "npm run build --workspace @studenthub/backend",
+  "start:api": "NODE_ENV=production node backend/dist/server.js",
+  "deploy:up": "docker compose -f docker-compose.prod.yml up -d --build",
+  "deploy:init": "docker compose -f docker-compose.prod.yml --profile init run --rm migrate",
+  "deploy:logs": "docker compose -f docker-compose.prod.yml logs -f api",
+  "deploy:down": "docker compose -f docker-compose.prod.yml down",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "setup": "npm run setup:env && npm install && npm run db:generate",
     "setup:env": "node scripts/setup-env.mjs",
@@ -37,6 +43,7 @@
     "db:migrate": "npm run db:migrate --workspace @studenthub/backend",
     "db:push": "npm run db:push --workspace @studenthub/backend",
     "db:seed": "npm run db:seed --workspace @studenthub/backend",
+    "db:import": "npm run db:import --workspace @studenthub/backend",
     "db:studio": "npm run db:studio --workspace @studenthub/backend"
   },
   "engines": {
