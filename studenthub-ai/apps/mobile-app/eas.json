@@ -11,7 +11,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:4000/api"
+        "EXPO_PUBLIC_API_BASE_URL": "https://studenthub-ai-5mmb.onrender.com/api"
       }
     },
     "preview": {
@@ -20,12 +20,18 @@
       "android": {
         "buildType": "apk"
       },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://studenthub-ai-5mmb.onrender.com/api"
+      },
       "autoIncrement": true
     },
     "production": {
       "channel": "production",
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://studenthub-ai-5mmb.onrender.com/api"
       },
       "autoIncrement": true
     }
