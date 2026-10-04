@@ -1,0 +1,52 @@
+{
+  "name": "studenthub-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StudentHub AI - Everything a Student Needs. Student-focused discovery of PGs, hostels, food and essential services near college.",
+  "workspaces": [
+    "apps/mobile-app",
+    "apps/owner-dashboard",
+    "apps/admin-panel",
+    "backend",
+    "packages/types",
+    "packages/ui"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,student -c magenta,cyan \"npm:dev:backend\" \"npm:dev:student\"",
+    "dev:student": "npm run web --workspace @studenthub/mobile-app",
+    "dev:owner": "npm run web --workspace @studenthub/owner-dashboard",
+    "dev:admin": "npm run web --workspace @studenthub/admin-panel",
+    "dev:mobile": "npm run start --workspace @studenthub/mobile-app",
+    "dev:web": "npm run dev:student",
+    "dev:android": "npm run android --workspace @studenthub/mobile-app",
+    "dev:ios": "npm run ios --workspace @studenthub/mobile-app",
+    "build:web": "npm run export:web --workspace @studenthub/mobile-app",
+    "build:mobile": "npm run export --workspace @studenthub/mobile-app",
+    "test": "npm test --workspace @studenthub/mobile-app && npm run test --workspace @studenthub/owner-dashboard && npm run test --workspace @studenthub/admin-panel",
+    "test:storage": "npm run test:storage --workspace @studenthub/mobile-app",
+    "test:owner-dashboard": "npm run test --workspace @studenthub/owner-dashboard",
+    "test:admin-panel": "npm run test --workspace @studenthub/admin-panel",
+    "dev:backend": "npm run dev --workspace @studenthub/backend",
+    "build": "npm run build --workspace @studenthub/backend && npm run build:web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "setup": "npm run setup:env && npm install && npm run db:generate",
+    "setup:env": "node scripts/setup-env.mjs",
+    "db:up": "if command -v docker >/dev/null 2>&1; then docker compose up -d postgres; else bash scripts/pg-local.sh start; fi",
+    "db:down": "if command -v docker >/dev/null 2>&1; then docker compose down; else bash scripts/pg-local.sh stop; fi",
+    "db:generate": "npm run db:generate --workspace @studenthub/backend",
+    "db:migrate": "npm run db:migrate --workspace @studenthub/backend",
+    "db:push": "npm run db:push --workspace @studenthub/backend",
+    "db:seed": "npm run db:seed --workspace @studenthub/backend",
+    "db:studio": "npm run db:studio --workspace @studenthub/backend"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

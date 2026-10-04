@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: studenthub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studenthub
+      POSTGRES_PASSWORD: studenthub
+      POSTGRES_DB: studenthub_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - studenthub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studenthub -d studenthub_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  studenthub_pgdata:

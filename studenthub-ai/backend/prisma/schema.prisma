@@ -1,0 +1,273 @@
+// StudentHub AI — V1 data model
+//
+// Design notes
+// - Soft, additive modelling: colleges and cities are first-class so the launch
+//   city (Guwahati / Gauhati University) can be extended without migrations of
+//   existing listings.
+// - `Place.ratingAvg` / `reviewCount` are denormalised aggregates kept in sync by
+//   the reviews service so the map and list endpoints stay cheap.
+// - Auth is intentionally minimal in V1: `User` exists, but guest usage and the
+//   Owner/Admin flows arrive in later phases.
+
+// Prisma 7 requires the generator `output`, and the datasource URL now lives in
+// `prisma.config.ts` (the CLI) and in the driver adapter (the runtime).
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlaceCategory {
+  PG
+  HOSTEL
+  RESTAURANT
+  MESS
+  CAFE
+  LIBRARY
+  PHARMACY
+  ATM
+  GROCERY
+  BUS_STOP
+  GYM
+}
+
+enum PlaceStatus {
+  DRAFT
+  PENDING
+  ACTIVE
+  REJECTED
+  INACTIVE
+}
+
+enum PlaceGender {
+  BOYS
+  GIRLS
+  CO_ED
+}
+
+enum UserRole {
+  STUDENT
+  OWNER
+  ADMIN
+}
+
+enum VisitRequestStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+/// Price cue students scan for (₹ / ₹₹ / ₹₹₹).
+enum PriceBand {
+  BUDGET
+  MID
+  PREMIUM
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String?  @unique
+  phone        String?  @unique
+  passwordHash String?
+  displayName  String
+  role         UserRole @default(STUDENT)
+  isGuest      Boolean  @default(false)
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reviews       Review[]
+  favorites     Favorite[]
+  visitRequests VisitRequest[]
+  owner         Owner?
+
+  @@index([role])
+}
+
+model College {
+  id        String   @id @default(cuid())
+  name      String
+  city      String
+  state     String
+  latitude  Float
+  longitude Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  places Place[]
+
+  @@unique([name, city])
+  @@index([city])
+}
+
+model Owner {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  businessName String
+  phone        String?
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  places Place[]
+  offers Offer[]
+}
+
+model Place {
+  id          String        @id @default(cuid())
+  ownerId     String?
+  collegeId   String?
+  category    PlaceCategory
+  gender      PlaceGender?
+  name        String
+  description String        @default("")
+  address     String
+  latitude    Float
+  longitude   Float
+  /// Price in INR. Free/unknown places keep null.
+  price       Int?
+  /// Display unit such as "/month" or "/person".
+  priceUnit   String?
+  phone       String?
+  /// WhatsApp number owners prefer for enquiries; null falls back to `phone`.
+  whatsapp    String?
+  /// Human-readable opening hours shown on the student page.
+  openingHours String?
+  /// ₹ / ₹₹ / ₹₹₹ cue students scan for; null means not set.
+  priceBand   PriceBand?
+  imageUrl    String
+  images      String[]      @default([])
+  verified    Boolean       @default(false)
+  status      PlaceStatus   @default(PENDING)
+  /// Denormalised from Review rows for cheap list queries.
+  ratingAvg   Float         @default(0)
+  reviewCount Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  owner         Owner?         @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  college       College?       @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  facilities    PlaceFacility[]
+  reviews       Review[]
+  favorites     Favorite[]
+  visitRequests VisitRequest[]
+  views         PlaceView[]
+  offers        Offer[]
+
+  @@index([category, status])
+  @@index([collegeId])
+  @@index([latitude, longitude])
+  @@index([ownerId, status])
+}
+
+model Facility {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  /// Lucide icon name used by the student app.
+  icon      String?
+  createdAt DateTime @default(now())
+
+  places PlaceFacility[]
+}
+
+/// Explicit join table: facilities are many-to-many with places.
+model PlaceFacility {
+  placeId    String
+  facilityId String
+
+  place    Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, facilityId])
+  @@index([facilityId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  placeId    String
+  userId     String?
+  /// Kept so guest/seed reviews (no account yet) still render an author.
+  authorName String
+  rating     Int
+  comment    String
+  /// Public answer written by the business owner; null until they reply.
+  reply      String?
+  repliedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([placeId])
+}
+
+/// One anonymous listing-detail view, so owners see real traffic numbers.
+model PlaceView {
+  id        String   @id @default(cuid())
+  placeId   String
+  createdAt DateTime @default(now())
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([placeId, createdAt])
+}
+
+/// Promotional offer an owner runs for one listing (or all of them).
+model Offer {
+  id          String    @id @default(cuid())
+  ownerId     String
+  /// Null means the offer applies to every listing the owner manages.
+  placeId     String?
+  title       String
+  description String
+  /// Whole percent, 1-100.
+  discount    Int
+  /// Null means the offer never expires.
+  validTill   DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  owner Owner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  place Place? @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, active])
+  @@index([placeId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  placeId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, placeId])
+  @@index([placeId])
+}
+
+model VisitRequest {
+  id            String            @id @default(cuid())
+  placeId       String
+  userId        String?
+  name          String
+  phone         String
+  preferredDate DateTime?
+  note          String?
+  status        VisitRequestStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([placeId, status])
+}

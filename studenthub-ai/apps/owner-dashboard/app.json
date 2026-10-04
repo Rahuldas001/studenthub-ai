@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "StudentHub Owner Dashboard",
+    "slug": "studenthub-owner-dashboard",
+    "version": "0.1.0",
+    "orientation": "any",
+    "userInterfaceStyle": "light",
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}
