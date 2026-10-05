@@ -2,9 +2,12 @@ import { Router } from 'express';
 import {
   deleteAccountHandler,
   getMe,
+  patchProfile,
+  postForgotPassword,
   postLogin,
   postLogout,
   postRegister,
+  postResetPassword,
 } from '../controllers/authController.js';
 import { validateBody } from '../middleware/validate.js';
 import { optionalAuth, requireAuth } from '../middleware/auth.js';
@@ -36,11 +39,25 @@ authRoutes.get('/me', optionalAuth, requireAuth, asyncHandler(getMe));
 
 authRoutes.post('/logout', optionalAuth, asyncHandler(postLogout));
 
-/**
- * Account deletion (Google Play production requirement). Needs a signed-in
- * session *and* the `DELETE` confirmation phrase, and is rate-limited so a
- * token cannot be brute-replayed.
- */
+authRoutes.post(
+  '/forgot-password',
+  rateLimit({ windowMs: 60_000, max: 5 }),
+  asyncHandler(postForgotPassword),
+);
+
+authRoutes.post(
+  '/reset-password',
+  rateLimit({ windowMs: 60_000, max: 5 }),
+  asyncHandler(postResetPassword),
+);
+
+authRoutes.patch(
+  '/profile',
+  optionalAuth,
+  requireAuth,
+  asyncHandler(patchProfile),
+);
+
 authRoutes.delete(
   '/account',
   rateLimit({ windowMs: 60_000, max: 5 }),

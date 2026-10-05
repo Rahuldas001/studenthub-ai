@@ -21,21 +21,11 @@ const scrypt = promisify(scryptCallback) as (
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 const KEY_LENGTH = 64;
 
-/**
- * Account and session logic for student sign-in.
- *
- * Deliberately dependency-free: passwords use Node's scrypt (format
- * `scrypt:<salt>:<hash>`), and sessions are HMAC-SHA256 signed bearer tokens
- * (`base64url(payload).base64url(signature)`), so no session table or cookie
- * jar is needed in V1. Rotating `AUTH_SECRET` invalidates every token.
- */
 type SessionClaims = { sub: string; role: UserRole; exp: number };
 
-/**
- * True for infrastructure failures (Postgres down/unreachable) rather than
- * request problems, so auth endpoints answer with a helpful 503 instead of a
- * generic 500 — mirroring how discovery endpoints fall back to demo data.
- */
+type OtpRecord = { code: string; expiresAt: number };
+const otpStore = new Map<string, OtpRecord>();
+
 export function unwrapInfrastructureError(error: unknown): unknown {
   const code = (error as { code?: string }).code ?? '';
   const message = (error as Error).message ?? '';
@@ -66,14 +56,12 @@ export function toSessionUser(user: {
   };
 }
 
-/** Hashes a plaintext password. Only the salted result is ever stored. */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
   const derived = await scrypt(password, salt, KEY_LENGTH);
   return `scrypt:${salt}:${derived.toString('hex')}`;
 }
 
-/** Constant-time password check; false for malformed or missing hashes. */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const [scheme, salt, hash] = stored.split(':');
   if (scheme !== 'scrypt' || !salt || !hash) return false;
@@ -83,7 +71,6 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return derived.length === expected.length && timingSafeEqual(derived, expected);
 }
 
-/** Signs `{ sub, role, exp }` into a compact bearer token. */
 export function signSessionToken(userId: string, role: UserRole): string {
   const claims: SessionClaims = {
     sub: userId,
@@ -95,7 +82,6 @@ export function signSessionToken(userId: string, role: UserRole): string {
   return `${body}.${signature}`;
 }
 
-/** Verifies signature and expiry; null means "treat as signed out". */
 export function verifySessionToken(token: string): SessionClaims | null {
   const [body, signature] = token.split('.');
   if (!body || !signature) return null;
@@ -115,13 +101,6 @@ export function verifySessionToken(token: string): SessionClaims | null {
   }
 }
 
-/**
- * Creates a student account and returns a signed-in session.
- *
- * Requires PostgreSQL: unlike discovery endpoints there is no demo fallback,
- * because credentials must be stored. Duplicate email/phone (Prisma P2002)
- * surfaces as a friendly 409.
- */
 export async function register(input: RegisterInput): Promise<{ token: string; user: SessionUser }> {
   const prisma = getPrismaClient();
   if (!prisma) {
@@ -153,12 +132,6 @@ export async function register(input: RegisterInput): Promise<{ token: string; u
   }
 }
 
-/**
- * Signs in with an email address or phone number.
- *
- * The generic message covers both "no such account" and "wrong password" so
- * the endpoint cannot be used to enumerate registered identifiers.
- */
 export async function login(input: LoginInput): Promise<{ token: string; user: SessionUser }> {
   const prisma = getPrismaClient();
   if (!prisma) {
@@ -184,7 +157,6 @@ export async function login(input: LoginInput): Promise<{ token: string; user: S
   return { token: signSessionToken(user.id, user.role), user: toSessionUser(user) };
 }
 
-/** Loads the signed-in account; 404 when the user row vanished (e.g. reseed). */
 export async function getAccount(userId: string): Promise<SessionUser> {
   const prisma = getPrismaClient();
   if (!prisma) {
@@ -199,4 +171,94 @@ export async function getAccount(userId: string): Promise<SessionUser> {
   }
   if (!user) throw HttpError.notFound('Account not found');
   return toSessionUser(user);
+}
+
+/** Generates a 6-digit verification code for password reset. */
+export async function requestPasswordReset(identifier: string): Promise<{ message: string; code: string }> {
+  const prisma = getPrismaClient();
+  if (!prisma) throw new HttpError(503, 'Database is unreachable.');
+
+  const clean = identifier.trim().toLowerCase();
+  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> = null;
+  try {
+    user = await prisma.user.findFirst({
+      where: clean.includes('@') ? { email: clean } : { phone: sanitizePhone(clean) },
+    });
+  } catch (error) {
+    throw unwrapInfrastructureError(error);
+  }
+
+  if (!user) {
+    throw HttpError.notFound('No account found with this email or phone number.');
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore.set(user.id, { code, expiresAt: Date.now() + 15 * 60 * 1000 });
+
+  return {
+    message: `Verification code generated for ${user.email ?? user.phone}`,
+    code,
+  };
+}
+
+/** Validates the OTP code and updates the password. */
+export async function resetPasswordWithCode(identifier: string, code: string, newPassword: string): Promise<{ message: string }> {
+  const prisma = getPrismaClient();
+  if (!prisma) throw new HttpError(503, 'Database is unreachable.');
+
+  const clean = identifier.trim().toLowerCase();
+  let user: Awaited<ReturnType<typeof prisma.user.findFirst>> = null;
+  try {
+    user = await prisma.user.findFirst({
+      where: clean.includes('@') ? { email: clean } : { phone: sanitizePhone(clean) },
+    });
+  } catch (error) {
+    throw unwrapInfrastructureError(error);
+  }
+
+  if (!user) {
+    throw HttpError.notFound('Account not found.');
+  }
+
+  const otp = otpStore.get(user.id);
+  if (!otp || otp.code !== code.trim() || Date.now() > otp.expiresAt) {
+    throw HttpError.badRequest('Invalid or expired 6-digit verification code.');
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+  } catch (error) {
+    throw unwrapInfrastructureError(error);
+  }
+
+  otpStore.delete(user.id);
+  return { message: 'Password reset successfully. You can now sign in with your new password.' };
+}
+
+/** Updates user profile fields (displayName, email, phone). */
+export async function updateProfile(userId: string, input: { displayName?: string; email?: string; phone?: string }): Promise<SessionUser> {
+  const prisma = getPrismaClient();
+  if (!prisma) throw new HttpError(503, 'Database is unreachable.');
+
+  const data: { displayName?: string; email?: string | null; phone?: string | null } = {};
+  if (input.displayName) data.displayName = sanitizeText(input.displayName, 80);
+  if (input.email !== undefined) data.email = input.email ? input.email.trim().toLowerCase() : null;
+  if (input.phone !== undefined) data.phone = input.phone ? sanitizePhone(input.phone) : null;
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+    return toSessionUser(updated);
+  } catch (error) {
+    if ((error as { code?: string }).code === 'P2002') {
+      throw new HttpError(409, 'An account with this email or phone already exists.');
+    }
+    throw unwrapInfrastructureError(error);
+  }
 }

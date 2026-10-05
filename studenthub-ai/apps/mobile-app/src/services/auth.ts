@@ -2,11 +2,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 import type { AuthPayload, LoginInput, OwnerAuthPayload, OwnerProfile, OwnerRegisterInput, RegisterInput, SessionUser } from '@studenthub/types';
 import { apiConfigured, apiRequest } from './api';
 
-/** Signed-in session persisted on the device (token + public account). */
 export interface StoredSession {
   token: string;
   user: SessionUser;
-  /** Present for OWNER accounts once the business profile is known. */
   owner?: OwnerProfile;
 }
 
@@ -30,7 +28,6 @@ function isSession(value: unknown): value is StoredSession {
   return value.owner === undefined || isOwnerProfile(value.owner);
 }
 
-/** Returns the stored session, or null when missing/corrupt. Never throws. */
 export async function loadSession(): Promise<StoredSession | null> {
   try {
     if (!AUTH_FILE) return null;
@@ -44,7 +41,6 @@ export async function loadSession(): Promise<StoredSession | null> {
   }
 }
 
-/** Persist the session; failures never break the in-memory sign-in. */
 export async function saveSession(session: StoredSession): Promise<void> {
   if (!AUTH_FILE) return;
   try {
@@ -56,7 +52,6 @@ export async function saveSession(session: StoredSession): Promise<void> {
   }
 }
 
-/** Remove the session after sign-out (idempotent). */
 export async function clearSession(): Promise<void> {
   if (!AUTH_FILE) return;
   try {
@@ -66,35 +61,58 @@ export async function clearSession(): Promise<void> {
   }
 }
 
-/** Accounts require the API; without it registration is unavailable. */
 function requireApi(): void {
   if (!apiConfigured()) {
     throw new Error('Accounts need the API. Set EXPO_PUBLIC_API_BASE_URL in apps/mobile-app/.env.');
   }
 }
 
-/** Creates an account and returns the signed-in session. */
 export async function registerAccount(input: RegisterInput): Promise<StoredSession> {
   requireApi();
   const payload = await apiRequest<AuthPayload>('/auth/register', { method: 'POST', body: input });
   return { token: payload.token, user: payload.user };
 }
 
-/** Creates an OWNER account with its business profile. */
 export async function registerOwnerAccount(input: OwnerRegisterInput): Promise<StoredSession> {
   requireApi();
   const payload = await apiRequest<OwnerAuthPayload>('/auth/owner/register', { method: 'POST', body: input });
   return { token: payload.token, user: payload.user, owner: payload.owner };
 }
 
-/** Signs in with an email address or phone number. */
 export async function loginAccount(input: LoginInput): Promise<StoredSession> {
   requireApi();
   const payload = await apiRequest<AuthPayload>('/auth/login', { method: 'POST', body: input });
   return { token: payload.token, user: payload.user };
 }
 
-/** What the server removed, echoed back for the confirmation message. */
+/** Requests a 6-digit verification code for password reset. */
+export async function requestForgotPassword(identifier: string): Promise<{ message: string; code: string }> {
+  requireApi();
+  return apiRequest<{ message: string; code: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: { identifier },
+  });
+}
+
+/** Resets password using the 6-digit verification code. */
+export async function confirmResetPassword(identifier: string, code: string, newPassword: string): Promise<{ message: string }> {
+  requireApi();
+  return apiRequest<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: { identifier, code, newPassword },
+  });
+}
+
+/** Updates student or owner profile fields (displayName, email, phone). */
+export async function updateProfileDetails(token: string, details: { displayName?: string; email?: string; phone?: string }): Promise<SessionUser> {
+  requireApi();
+  return apiRequest<SessionUser>('/auth/profile', {
+    method: 'PATCH',
+    body: details,
+    token,
+  });
+}
+
 export interface DeletedAccountSummary {
   deleted: true;
   email: string | null;
@@ -104,13 +122,6 @@ export interface DeletedAccountSummary {
   listingsReleased: number;
 }
 
-/**
- * Permanently deletes the signed-in account on the server.
- *
- * Irreversible — callers must confirm with the user first. The `DELETE` phrase
- * is the confirmation the API demands, so it cannot be triggered by a stray
- * request body.
- */
 export async function deleteAccount(token: string): Promise<DeletedAccountSummary> {
   return apiRequest<DeletedAccountSummary>('/auth/account', {
     method: 'DELETE',
