@@ -24,7 +24,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 /** Development owner, admin and student logins documented in the README. */
 const DEMO_OWNER_EMAIL = 'demo.owner@studenthub.local';
-const DEMO_ADMIN_EMAIL = 'demo.admin@studenthub.local';
+const DEMO_ADMIN_EMAIL = 'adminstudenthub@gmail.com';
 const DEMO_STUDENT_EMAIL = 'demo.student@studenthub.local';
 
 async function main(): Promise<void> {
@@ -79,11 +79,10 @@ async function main(): Promise<void> {
 
   const admin = await prisma.user.upsert({
     where: { email: DEMO_ADMIN_EMAIL },
-    // Development login for the admin panel: `admin-password-123`.
-    update: { passwordHash: await hashPassword('admin-password-123') },
+    update: { passwordHash: await hashPassword('studenthub@123') },
     create: {
       email: DEMO_ADMIN_EMAIL,
-      passwordHash: await hashPassword('admin-password-123'),
+      passwordHash: await hashPassword('studenthub@123'),
       displayName: 'StudentHub Admin',
       role: 'ADMIN',
     },
