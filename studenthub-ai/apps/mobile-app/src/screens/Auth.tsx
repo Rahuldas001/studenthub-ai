@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, colors, ui } from '../components/ui';
 import { useStudent } from '../context/StudentContext';
-import { nearestCollege } from '../services/places';
-import { requestDeviceLocation } from '../services/location';
 import { ApiRequestError } from '../services/api';
 import { confirmResetPassword, requestForgotPassword } from '../services/auth';
 
@@ -24,7 +22,7 @@ function describeAuthError(problem: unknown, fallback: string): string {
 }
 
 export default function Auth({ onAuthenticated, onBack, intent = 'student', initialMode = 'signup' }: { onAuthenticated: () => void; onBack: () => void; intent?: 'student' | 'owner'; initialMode?: 'signup' | 'login' }) {
-  const { signIn, signUp, signUpOwner, authBusy, session, signOut, location, colleges, chooseLocation } = useStudent();
+  const { signIn, signUp, signUpOwner, authBusy, session, signOut } = useStudent();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [business, setBusiness] = useState(intent === 'owner');
   const [businessName, setBusinessName] = useState('');
@@ -34,8 +32,6 @@ export default function Auth({ onAuthenticated, onBack, intent = 'student', init
   const [phone, setPhone] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [locating, setLocating] = useState(false);
-  const [locationNote, setLocationNote] = useState('');
   const [error, setError] = useState('');
 
   /* Password Reset / OTP states */
@@ -44,25 +40,6 @@ export default function Auth({ onAuthenticated, onBack, intent = 'student', init
   const [newPassword, setNewPassword] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [generatedCodeHint, setGeneratedCodeHint] = useState<string | null>(null);
-
-  const askForLocation = async () => {
-    if (locating) return;
-    setLocating(true);
-    setLocationNote('');
-    const fix = await requestDeviceLocation();
-    setLocating(false);
-    if (!fix.granted) {
-      setLocationNote('Location access was declined. You can turn it on later from Home.');
-      return;
-    }
-    const nearest = nearestCollege(colleges, fix.latitude, fix.longitude);
-    if (!nearest) {
-      setLocationNote('We could not match you to a campus yet.');
-      return;
-    }
-    chooseLocation({ city: nearest.city, latitude: nearest.latitude, longitude: nearest.longitude });
-    setLocationNote(`Location set — showing places near ${nearest.city}.`);
-  };
 
   const handleSendOtp = () => {
     setError('');
@@ -203,17 +180,7 @@ export default function Auth({ onAuthenticated, onBack, intent = 'student', init
           <TextInput accessibilityLabel="Email" autoCapitalize="none" keyboardType="email-address" maxLength={200} value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={colors.muted} style={ui.input} />
           <Text style={ui.cardTitle}>Phone (optional with email)</Text>
           <TextInput accessibilityLabel="Phone" keyboardType="phone-pad" maxLength={16} value={phone} onChangeText={setPhone} placeholder="Phone number" placeholderTextColor={colors.muted} style={ui.input} />
-          <View style={styles.locationCard}>
-            <View style={styles.locationIcon}><Text style={{ fontSize: 18, color: colors.purple }}>◎</Text></View>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.locationTitle}>Your location</Text>
-              <Text style={ui.caption}>{business ? 'Allow location access so students near your business can find you.' : 'Allow location access so we can show hostels, PGs, food and services near you.'}</Text>
-              <Text style={styles.locationValue}>{locationNote || `Showing places near ${location.city}.`}</Text>
-            </View>
-          </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Allow location access" accessibilityState={{ disabled: locating }} onPress={askForLocation} disabled={locating} style={[styles.locationCta, locating && { opacity: 0.7 }]}>
-            <Text style={styles.locationCtaText}>{locating ? 'Locating…' : 'Allow location access'}</Text>
-          </Pressable>
+
           {business ? (
             <>
               <Text style={ui.cardTitle}>Business name</Text>
@@ -334,12 +301,6 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: '#fff' },
   segmentText: { fontSize: 13, fontWeight: '700', color: colors.muted },
   segmentTextActive: { color: colors.purple },
-  locationCard: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', backgroundColor: colors.pale, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.line },
-  locationIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  locationTitle: { fontSize: 15, fontWeight: '800', color: colors.ink },
-  locationValue: { color: colors.purple, fontWeight: '700', fontSize: 12 },
-  locationCta: { backgroundColor: colors.pale, borderRadius: 14, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.purple },
-  locationCtaText: { color: colors.purple, fontWeight: '700', fontSize: 13 },
   toggle: { marginTop: 4, alignItems: 'center' },
   note: { color: colors.muted, fontSize: 11, textAlign: 'center', lineHeight: 16 },
   error: { color: colors.star, fontSize: 12, lineHeight: 18 },
